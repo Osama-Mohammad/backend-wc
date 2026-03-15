@@ -19,7 +19,8 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => ['https://threads-thrill.vercel.app',
+    ],
     'allowed_origins_patterns' => [
         '#^https://password-manager-frontend-.*\.vercel\.app$#',
     ],    // 'allowed_origins_patterns' => [],
