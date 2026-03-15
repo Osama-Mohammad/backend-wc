@@ -34,7 +34,9 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Laravel permissions
-RUN mkdir -p storage/framework/cache \
+RUN mkdir -p \
+    storage/framework/cache \
+    storage/framework/cache/data \
     storage/framework/sessions \
     storage/framework/views \
     bootstrap/cache \
