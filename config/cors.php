@@ -22,7 +22,7 @@ return [
     'allowed_origins' => ['https://threads-thrill.vercel.app',
     ],
     'allowed_origins_patterns' => [
-        '#^https://password-manager-frontend-.*\.vercel\.app$#',
+        '#^https://threads-thrill-.*\.vercel\.app$#',
     ],    // 'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
