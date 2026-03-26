@@ -21,6 +21,15 @@ class ProductImage extends Model
 
     public function getImageUrlAttribute()
     {
-        return asset('storage/'.$this->image_path);
+        // // return asset('storage/'.$this->image_path);
+        // return secure_asset('storage/'.$this->image_path);
+
+        if (! $this->image_path) {
+            return null;
+        }
+
+        $path = preg_replace('#^products/#', '', $this->image_path);
+
+        return rtrim(env('SUPABASE_PUBLIC_BASE_URL'), '/').'/'.ltrim($path, '/');
     }
 }

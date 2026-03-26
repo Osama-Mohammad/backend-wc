@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
@@ -80,7 +81,7 @@ class ProductController extends Controller
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $index => $image) {
-                $path = $image->store('products', 'public');
+                $path = $image->storePublicly('products', 'supabase');
 
                 ProductImage::create([
                     'product_id' => $product->id,
@@ -178,7 +179,7 @@ class ProductController extends Controller
             ->whereNotIn('id', $keepIds)
             ->get()
             ->each(function ($image) {
-                \Storage::disk('public')->delete($image->image_path);
+                Storage::disk('supabase')->delete($image->image_path);
                 $image->delete();
             });
 
@@ -187,7 +188,7 @@ class ProductController extends Controller
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $imageFile) {
-                $path = $imageFile->store('products', 'public');
+                $path = $imageFile->storePublicly('products', 'supabase');
 
                 ProductImage::create([
                     'product_id' => $product->id,
@@ -204,9 +205,11 @@ class ProductController extends Controller
 
         if ($remainingImages->isNotEmpty()) {
             $firstId = $remainingImages->first()->id;
+
             $product->images()->update([
                 'is_primary' => false,
             ]);
+
             $product->images()->where('id', $firstId)->update([
                 'is_primary' => true,
             ]);
@@ -228,6 +231,11 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
+        $product->images()->get()->each(function ($image) {
+            Storage::disk('supabase')->delete($image->image_path);
+            $image->delete();
+        });
+
         $product->delete();
 
         return response()->json([
