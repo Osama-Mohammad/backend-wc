@@ -14,6 +14,7 @@ return [
     */
 
     'default' => env('FILESYSTEM_DISK', 'local'),
+    'product_upload_disk' => env('PRODUCT_UPLOAD_DISK', 'public'),
 
     /*
     |--------------------------------------------------------------------------

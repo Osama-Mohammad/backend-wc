@@ -22,13 +22,7 @@ class ProductController extends Controller
         $perPage = (int) $request->get('per_page', 30);
         $perPage = $perPage > 0 ? min($perPage, 100) : 30;
 
-        $query = Product::with([
-            'category',
-            'images' => function ($q) {
-                $q->orderBy('sort_order')->orderBy('id');
-            },
-            'primaryImage',
-        ]);
+        $query = Product::with($this->productRelations());
 
         if (! $isAdmin) {
             $query->where('is_active', true);
@@ -57,7 +51,7 @@ class ProductController extends Controller
             'description' => 'required|string|max:500',
             'category_id' => 'required|exists:categories,id',
             'price' => 'required|numeric|min:0',
-            'images' => 'array|nullable',
+            'images' => 'nullable|array',
             'images.*' => 'file|mimes:jpg,jpeg,png,webp,jfif|max:2048',
         ]);
 
@@ -79,9 +73,11 @@ class ProductController extends Controller
             'is_active' => true,
         ]);
 
+        $disk = $this->uploadDisk();
+
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $index => $image) {
-                $path = $image->storePublicly('products', 'supabase');
+                $path = $image->storePublicly('products', $disk);
 
                 ProductImage::create([
                     'product_id' => $product->id,
@@ -92,13 +88,7 @@ class ProductController extends Controller
             }
         }
 
-        $product->load([
-            'category',
-            'images' => function ($q) {
-                $q->orderBy('sort_order')->orderBy('id');
-            },
-            'primaryImage',
-        ]);
+        $product->load($this->productRelations());
 
         return response()->json([
             'product' => $product,
@@ -117,13 +107,7 @@ class ProductController extends Controller
             abort(404);
         }
 
-        $product->load([
-            'category',
-            'images' => function ($q) {
-                $q->orderBy('sort_order')->orderBy('id');
-            },
-            'primaryImage',
-        ]);
+        $product->load($this->productRelations());
 
         return response()->json([
             'product' => $product,
@@ -171,6 +155,8 @@ class ProductController extends Controller
             'slug' => $slug,
         ]);
 
+        $disk = $this->uploadDisk();
+
         $keepIds = collect($validated['existing_image_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
             ->values();
@@ -178,17 +164,17 @@ class ProductController extends Controller
         $product->images()
             ->whereNotIn('id', $keepIds)
             ->get()
-            ->each(function ($image) {
-                Storage::disk('supabase')->delete($image->image_path);
+            ->each(function ($image) use ($disk) {
+                Storage::disk($disk)->delete($image->image_path);
                 $image->delete();
             });
 
-        $currentMaxSort = (int) $product->images()->max('sort_order');
-        $nextSort = $currentMaxSort + 1;
+        $currentMaxSort = $product->images()->max('sort_order');
+        $nextSort = is_null($currentMaxSort) ? 0 : ((int) $currentMaxSort + 1);
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $imageFile) {
-                $path = $imageFile->storePublicly('products', 'supabase');
+                $path = $imageFile->storePublicly('products', $disk);
 
                 ProductImage::create([
                     'product_id' => $product->id,
@@ -201,7 +187,10 @@ class ProductController extends Controller
             }
         }
 
-        $remainingImages = $product->images()->orderBy('sort_order')->orderBy('id')->get();
+        $remainingImages = $product->images()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
 
         if ($remainingImages->isNotEmpty()) {
             $firstId = $remainingImages->first()->id;
@@ -216,13 +205,7 @@ class ProductController extends Controller
         }
 
         return response()->json([
-            'product' => $product->fresh()->load([
-                'category',
-                'images' => function ($q) {
-                    $q->orderBy('sort_order')->orderBy('id');
-                },
-                'primaryImage',
-            ]),
+            'product' => $product->fresh()->load($this->productRelations()),
         ]);
     }
 
@@ -231,8 +214,10 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        $product->images()->get()->each(function ($image) {
-            Storage::disk('supabase')->delete($image->image_path);
+        $disk = $this->uploadDisk();
+
+        $product->images()->get()->each(function ($image) use ($disk) {
+            Storage::disk($disk)->delete($image->image_path);
             $image->delete();
         });
 
@@ -241,5 +226,21 @@ class ProductController extends Controller
         return response()->json([
             'message' => 'Product Deleted Successfully',
         ]);
+    }
+
+    private function uploadDisk(): string
+    {
+        return config('filesystems.product_upload_disk', 'public');
+    }
+
+    private function productRelations(): array
+    {
+        return [
+            'category',
+            'images' => function ($q) {
+                $q->orderBy('sort_order')->orderBy('id');
+            },
+            'primaryImage',
+        ];
     }
 }

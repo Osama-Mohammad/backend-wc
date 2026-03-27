@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class ProductImage extends Model
 {
@@ -25,6 +26,11 @@ class ProductImage extends Model
             return null;
         }
 
-        return rtrim(env('SUPABASE_PUBLIC_BASE_URL'), '/').'/'.ltrim($this->image_path, '/');
+        // ----------------new-----------------
+        $disk = config('filesystems.product_upload_disk');
+
+        return Storage::disk($disk)->url($this->image_path);
+        // ----------------
+        // return rtrim(env('SUPABASE_PUBLIC_BASE_URL'), '/').'/'.ltrim($this->image_path, '/');
     }
 }
