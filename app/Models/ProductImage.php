@@ -27,10 +27,18 @@ class ProductImage extends Model
         }
 
         // ----------------new-----------------
-        $disk = config('filesystems.product_upload_disk');
+        // $disk = config('filesystems.product_upload_disk');
+
+        // return Storage::disk($disk)->url($this->image_path);
+        // // ----------------
+        // // return rtrim(env('SUPABASE_PUBLIC_BASE_URL'), '/').'/'.ltrim($this->image_path, '/');
+
+        $disk = config('filesystems.product_upload_disk', 'public');
+
+        if ($disk === 'supabase') {
+            return rtrim(env('SUPABASE_PUBLIC_BASE_URL'), '/').'/'.ltrim($this->image_path, '/');
+        }
 
         return Storage::disk($disk)->url($this->image_path);
-        // ----------------
-        // return rtrim(env('SUPABASE_PUBLIC_BASE_URL'), '/').'/'.ltrim($this->image_path, '/');
     }
 }
