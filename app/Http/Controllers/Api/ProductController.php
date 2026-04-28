@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Support\ImageWebpConverter;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -77,7 +79,7 @@ class ProductController extends Controller
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $index => $image) {
-                $path = $image->storePublicly('products', $disk);
+                $path = $this->storeAsWebp($image, $disk);
 
                 ProductImage::create([
                     'product_id' => $product->id,
@@ -174,7 +176,7 @@ class ProductController extends Controller
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $imageFile) {
-                $path = $imageFile->storePublicly('products', $disk);
+                $path = $this->storeAsWebp($imageFile, $disk);
 
                 ProductImage::create([
                     'product_id' => $product->id,
@@ -231,6 +233,23 @@ class ProductController extends Controller
     private function uploadDisk(): string
     {
         return config('filesystems.product_upload_disk', 'public');
+    }
+
+    private function storeAsWebp(UploadedFile $file, string $disk): string
+    {
+        $bytes = ImageWebpConverter::encode(
+            file_get_contents($file->getRealPath())
+        );
+
+        $path = 'products/'.ImageWebpConverter::randomFilename();
+
+        Storage::disk($disk)->put($path, $bytes, [
+            'visibility' => 'public',
+            'ContentType' => 'image/webp',
+            'CacheControl' => 'public, max-age=31536000, immutable',
+        ]);
+
+        return $path;
     }
 
     private function productRelations(): array
